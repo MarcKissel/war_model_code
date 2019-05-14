@@ -152,6 +152,10 @@ values_RMS2 <- values %>% group_by(Country, Year) %>% mutate(RMS = (sqrt(mean(di
 ```
 
 ok, i want to add country names to the values_RMS2 set
+BELOW is using another list. maybe use the better one?
+
+
+
 
 ```{r add country names}
 
@@ -167,5 +171,36 @@ values_total <- values_temp
 write_csv(values_total, "world_bank_TAS_with_country_names.csv")
 ```
 
+
+fixing issues
+using Countrycode package: 
+
+Arel-Bundock, Vincent, Nils Enevoldsen, and CJ Yetman, (2018). countrycode: An R package to convert country names and country codes. Journal of Open Source Software, 3(28), 848, https://doi.org/10.21105/joss.00848
+
+```{r}
+library(countrycode)
+#need to check the code from my set
+temp_codelist <- codelist %>% select(continent, country.name.en, iso.name.en, iso3c, region) #taking a few cols that may be useful
+#add col to join by in values_RMS2
+
+values_RMS_edited <- values_RMS %>% mutate(iso3c = Country)
+
+# i think left join or inner join
+my_join <- inner_join(values_RMS_edited, temp_codelist, by ="iso3c") #some data (460 rows are lost here..) specifically loosking these:
+#1 ANT       115
+#2 CCK       115
+#3 IOT       115
+#4 ROM       115
+#5 XRK       115 (Kosovo)
+#6 ZAR       115 (Democratic Republic of the Congo)
+
+my_join2 <- left_join(values_RMS_edited, temp_codelist, by ="iso3c")
+26565- 26105
+
+
+```
+
+
+OK, this works! but next step is to think about what i need in the dataframe. i can't remember where we are going with this. might need the max and min values 
 
 
