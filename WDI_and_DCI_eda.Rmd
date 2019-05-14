@@ -54,7 +54,7 @@ joined %>%  arrange(desc(NY.GDP.PCAP.CD)) %>% ggplot(aes(x=NY.GDP.PCAP.CD, y = X
 all data
 
 ```{r}
-wdi_indicator_all <-WDI(indicator = c( "NY.GDP.PCAP.CD", "MS.MIL.XPND.GD.ZS	", "VC.PKP.TOTL.UN"), extra = TRUE, start= 1960, end = 2010)
+wdi_indicator_all <-WDI(indicator = c( "NY.GDP.PCAP.CD", "MS.MIL.XPND.GD.ZS", "VC.PKP.TOTL.UN"), extra = TRUE, start= 1960, end = 2010)
 
 #i want to rename so i can join. rename DCI
 
@@ -66,11 +66,30 @@ joined_all <- DCI_edited_all %>% inner_join(wdi_indicator_all, by = c("iso3c", "
 
 joined_all %>% filter(year >2000) %>%   arrange(desc(NY.GDP.PCAP.CD)) %>% ggplot(aes(x=NY.GDP.PCAP.CD, y = X)) + geom_point() + facet_wrap(~year) + scale_x_log10() #+ geom_text(aes(label = country), vjust = 1, hjust = 1, check_overlap = TRUE)
 
+#all data
 
-joined_all %>% filter(year >2000) %>%   arrange(desc(MS.MIL.XPND.GD.ZS)) %>% ggplot(aes(x=MS.MIL.XPND.GD.ZS, y = X)) + geom_point() + facet_wrap(~year) + scale_x_log10() + labs (x = "Military expenditure (% of GDP)", y = "DCI", title = "DCI and Military expenditure are correlated")
+joined_all  %>%   arrange(desc(MS.MIL.XPND.GD.ZS)) %>% ggplot(aes(x=MS.MIL.XPND.GD.ZS, y = X, color = region)) + geom_point() +  scale_x_log10() + labs (x = "Military expenditure (% of GDP)", y = "DCI", title = "DCI and Military expenditure are correlated", subtitle = "from years 1960-2010")
+
+joined_all  %>%   arrange(desc(MS.MIL.XPND.GD.ZS)) %>% ggplot(aes(x=MS.MIL.XPND.GD.ZS, y = X, color = region)) + geom_point() +  scale_x_log10() + labs (x = "Military expenditure (% of GDP)", y = "DCI", title = "DCI and Military expenditure are correlated", subtitle = "from years 1960-2010")
+
+
+#for the 2000s
+joined_all %>% filter(year >2000) %>%   arrange(desc(MS.MIL.XPND.GD.ZS)) %>% ggplot(aes(x=MS.MIL.XPND.GD.ZS, y = X, color = region)) + geom_point() + facet_wrap(~year) + scale_x_log10() + labs (x = "Military expenditure (% of GDP)", y = "DCI", title = "DCI and Military expenditure are correlated") #facet_wrap
+
+joined_all %>% filter(year >2000) %>%   arrange(desc(MS.MIL.XPND.GD.ZS)) %>% ggplot(aes(x=MS.MIL.XPND.GD.ZS, y = X, color = region)) + geom_point() +  scale_x_log10() + labs (x = "Military expenditure (% of GDP)", y = "DCI", title = "DCI and Military expenditure are correlated", subtitle = "from years 2001-2010") # all data post 2000 in one
+
+
+
+#1990s
+
+joined_all %>% filter(year >1989 & year <2000) %>%   arrange(desc(MS.MIL.XPND.GD.ZS)) %>% ggplot(aes(x=MS.MIL.XPND.GD.ZS, y = X, color = region)) + geom_point() + facet_wrap(~year) + scale_x_log10() + labs (x = "Military expenditure (% of GDP)", y = "DCI", title = "DCI and Military expenditure are correlated") #facet_wrap
+
+
+joined_all %>% filter(year >1989 & year <2000) %>%   arrange(desc(MS.MIL.XPND.GD.ZS)) %>% ggplot(aes(x=MS.MIL.XPND.GD.ZS, y = X, color = region)) + geom_point() + scale_x_log10() + labs (x = "Military expenditure (% of GDP)", y = "DCI", title = "DCI and Military expenditure are correlated", subtitle = "1990-1999 data") #all data
+
 
 #just one year
-joined_all %>% filter(year == 2000) %>%   arrange(desc(MS.MIL.XPND.GD.ZS)) %>% ggplot(aes(x=MS.MIL.XPND.GD.ZS, y = X)) + geom_point() + facet_wrap(~year) + scale_x_log10() + labs (x = "Military expenditure (% of GDP)", y = "DCI", title = "DCI and Military expenditure are correlated") + geom_text(aes(label = country), vjust = 1, hjust = 1, check_overlap = TRUE)
+joined_all %>% filter(year == 2000) %>%   arrange(desc(MS.MIL.XPND.GD.ZS)) %>% ggplot(aes(x=MS.MIL.XPND.GD.ZS, y = X, color = region)) + geom_point() + facet_wrap(~year) + scale_x_log10() + labs (x = "Military expenditure (% of GDP)", y = "DCI", title = "DCI and Military expenditure are correlated", subtitle = "year = 2000") + geom_text(aes(label = country), vjust = 1, hjust = 1, check_overlap = TRUE, angle = 45)
 
 
 
@@ -90,11 +109,31 @@ joined_all %>% filter(year >2000) %>%   arrange(desc(VC.PKP.TOTL.UN)) %>% ggplot
      data = joined_all) %>%
   summary()
 
-fit <-  lm(X  ~ log10(MS.MIL.XPND.GD.ZS),
+fit1 <-  lm(X  ~ (MS.MIL.XPND.GD.ZS),
+     data = joined_all) 
+
+fit2 <-  lm(X  ~ log10(MS.MIL.XPND.GD.ZS),
      data = joined_all) 
 ```
 
+fit2 (which logs the milt expenditure) shows a sig relationship with milt expen on DCI. as we increase Milt.Exped by 1 unit it increases DCI by .1
 
+Coefficients:
+                         Estimate Std. Error t value Pr(>|t|)    
+(Intercept)              0.775290   0.001110  698.63   <2e-16 ***
+log10(MS.MIL.XPND.GD.ZS) 0.100171   0.002138   46.84   <2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.04556 on 3296 degrees of freedom
+  (816 observations deleted due to missingness)
+Multiple R-squared:  0.3997,	Adjusted R-squared:  0.3995 
+F-statistic:  2194 on 1 and 3296 DF,  p-value: < 2.2e-16
+
+
+
+issues: 
+some countirs have multiple data in the joined dataframe for a year./
 
 next steps
 1. check by decade or see what happens during war times
