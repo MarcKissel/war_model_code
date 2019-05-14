@@ -1,0 +1,171 @@
+---
+title: "Climate take 3"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+```
+
+
+
+THINK ABOUT library(wbstats)
+and https://cengel.github.io/gearup2016/SULdataAccess.html
+AND:   https://github.com/ropensci/rWBclimate
+
+
+problems were missing data in the WorldBank set
+re-downloading them
+
+
+###About the data
+
+Upon much work it looks like can't get the data via API request.
+(https://datahelpdesk.worldbank.org/knowledgebase/articles/902061-climate-data-api)
+The reason for this is that for the API can only either get Yearly averages or the avg monthly TAS (for the time span)
+
+ALSO< note that for a lot of the data TAS is estaimted. 
+"he Climate Data API provides access to historical temperature and precipitation data. These data are separate from the outputs of the GCMs, and they are based on gridded climatologies from the Climate Research Unit. Again, note that these data are proxies for temperature and precipitation, where modeling has been used to extrapolate estimates where instrumental (station) data were unavailable or unreliable, especially in the early 1900's."
+
+for the data from the word bank (http://sdwebx.worldbank.org/climateportal/index.cfm?page=downscaled_data_download&menu=historical) can only get 30 countries at a time. 
+
+"This gridded historical dataset is derived from observational data, and provides quality controlled temperature and rainfall values from thousands of weather stations worldwide, as well as derivative products including monthly climatologies and long term historical climatologies. The dataset is produced by the Climatic Research Unit (CRU) of University of East Anglia (UEA), and reformatted by International Water Management Institute (IWMI). CRU-(Gridded Product). CRU data can be mapped to show the baseline climate and seasonality by month, for specific years, and for rainfall and temperature."
+
+
+
+TAS= near surface monthly mean air temperature (tas), 
+
+first, read data into R and calculate values
+
+```{r}
+my_data <- read_csv("fix_world_bank.csv")
+
+
+```
+
+
+#######
+https://datahelpdesk.worldbank.org/knowledgebase/articles/902061-climate-data-api
+https://www.r-bloggers.com/accessing-apis-from-r-and-a-little-r-programming/
+https://www.programmableweb.com/news/how-to-access-any-restful-api-using-r-language/how-to/2017/07/21
+
+```{r}
+
+#http://climatedataapi.worldbank.org/climateweb/rest/v1/country/mavg/tas/2020/2039/afg
+
+require("httr")
+#This package makes requesting data from just about any API easier by formatting your GET requests with the proper headers and authentications. Next, install jsonlite in your script:
+require("jsonlite")
+library(tidyverse)
+
+url <- "http://climatedataapi.worldbank.org/climateweb/rest/v1/country/mavg/tas/2020/2039/afg"
+path <- "eurlex/directory_code"
+raw.result <- GET(url = url, path = path)
+names(raw.result)
+
+this.raw.content <- rawToChar(raw.result$content)
+```
+
+
+
+
+######
+
+
+
+ok, now we want something different. 
+1. get the higset 3 values for a month
+2. get the lowest 3 values for a month
+
+then max year 1 - max year 2 and min year 1 - min year 2
+
+
+
+```{r new values}
+#look at data organized  by TAS
+
+temp <- my_data %>% group_by(Country, Year) %>% arrange(TAS, .by_group =TRUE) 
+
+#now i want to get the lowest and highest 3 TAS by country
+
+#filter(row_number()>9)
+
+#temp %>% filter(row_number()>9) # highest 3
+
+max_min_TAS_by_county <- temp %>% filter(row_number()>9 | row_number()<4) # this is all. but i want mean of the high and lows so might need to do as seperate?
+
+max_vals <- temp %>% filter(row_number()>9) # highest
+min_vals <- temp %>% filter(row_number()<4) # lowest
+
+min_vals_mean <- min_vals %>% summarise(Mean_min = mean(TAS))
+max_vals_mean <- max_vals %>% summarise(Mean_max = mean(TAS))
+
+#woot
+#now i need to subtract 1 from 2, 2 from  3, 3 from 4, etc
+
+
+min_vals_mean  %>%  mutate(change_from_last_year = Mean_min - lag(Mean_min, 1)) #checking if right
+
+#min_vals_mean$Mean_min[9] - min_vals_mean$Mean_min[8]
+#it works but maybe try to get rid of the NA
+
+avg_min_change <-  min_vals_mean  %>%  mutate(min_change_from_last_year = Mean_min - lag(Mean_min, default=Mean_min[1]))   #this works and removes the NA from the first....but what about when you get to next country.....i think it works
+
+
+avg_max_change <-  max_vals_mean  %>%  mutate(max_change_from_last_year = Mean_max - lag(Mean_max, default=Mean_max[1])) 
+
+
+
+```
+
+ok so now i have a databale to the avg max change and avg min change for each country and year
+
+Next i want to join the tables together?
+
+
+```{r}
+all_things <- left_join(avg_min_change, avg_max_change)
+```
+
+
+
+
+ 
+
+
+```{r}
+
+subset_1951_1980 <- my_data %>% filter(Year >1950 & Year < 1981)
+
+subset_1951_1980 <- subset_1951_1980 %>% group_by(Month, Country) 
+
+#now we need the avg for a month between 1951-1980
+
+new_list <- subset_1951_1980 %>% group_by(Month, Country) %>% summarise(mean_for_month = mean(TAS)) #new dataframe with means for each month between 1951-1980
+
+new_data <- left_join(my_data, new_list) #put data together
+values <- new_data %>% mutate(difference = TAS - mean_for_month)
+values_RMS <- values %>% group_by(Country, Year) %>% summarise(RMS = (sqrt(mean(difference^2)))  ) # here is just the vector of RMS
+values_RMS2 <- values %>% group_by(Country, Year) %>% mutate(RMS = (sqrt(mean(difference^2)))  ) #here is with new col RMS in the dataset
+
+
+```
+
+ok, i want to add country names to the values_RMS2 set
+
+```{r add country names}
+
+names <- read_csv("Country_iso.csv")
+values_RMS_edited <- values_RMS2 %>% rename(`Alpha-3_code` = Country)
+left_join(values_RMS_edited, names)
+values_temp <- left_join(values_RMS_edited, names)
+#check to see didn't loose data
+dim(values_RMS_edited)
+dim(values_temp)
+#somethign wonky....look at the country_iso list
+values_total <- values_temp
+write_csv(values_total, "world_bank_TAS_with_country_names.csv")
+```
+
+
+

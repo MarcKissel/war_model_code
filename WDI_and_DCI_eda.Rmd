@@ -1,0 +1,108 @@
+---
+title: "Untitled"
+author: "Marc Kissel"
+date: "5/12/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+DCI <- read_csv("DCI_data_full.csv")
+
+
+
+library(WDI)
+
+
+
+```
+
+
+```{r}
+WDIsearch("*conflict") %>%
+  as.data.frame() %>%
+  tbl_df() %>%
+  arrange(str_length(name)) %>%
+  View()
+```
+
+look at WDI
+indicator NY.GDP.PCAP.CD = GDP per capita (current US$)
+looks like only data rom 1960 onward for the GDP stuff
+might be loosing coutnired in the join due to names...triple check afterwards
+
+```{r}
+wdi_indicator <-WDI(indicator = "NY.GDP.PCAP.CD", extra = TRUE, start= 2010, end = 2010)
+
+#i want to rename so i can join. rename DCI
+
+DCI_edited <- DCI %>% mutate(iso3c = stateabb) %>% filter(year == "2010")
+
+joined <- DCI_edited %>% inner_join(wdi_indicator, by = "iso3c") 
+
+#maybe left?
+
+joined %>% count(country)
+
+joined %>%  arrange(desc(NY.GDP.PCAP.CD)) %>% ggplot(aes(x=NY.GDP.PCAP.CD, y = X)) + geom_point()
+```
+
+all data
+
+```{r}
+wdi_indicator_all <-WDI(indicator = c( "NY.GDP.PCAP.CD", "MS.MIL.XPND.GD.ZS	", "VC.PKP.TOTL.UN"), extra = TRUE, start= 1960, end = 2010)
+
+#i want to rename so i can join. rename DCI
+
+DCI_edited_all <- DCI %>% mutate(iso3c = stateabb) %>% filter(year > "1959")
+
+joined_all <- DCI_edited_all %>% inner_join(wdi_indicator_all, by = c("iso3c", "year") )
+
+#i need to check if this work via year?
+
+joined_all %>% filter(year >2000) %>%   arrange(desc(NY.GDP.PCAP.CD)) %>% ggplot(aes(x=NY.GDP.PCAP.CD, y = X)) + geom_point() + facet_wrap(~year) + scale_x_log10() #+ geom_text(aes(label = country), vjust = 1, hjust = 1, check_overlap = TRUE)
+
+
+joined_all %>% filter(year >2000) %>%   arrange(desc(MS.MIL.XPND.GD.ZS)) %>% ggplot(aes(x=MS.MIL.XPND.GD.ZS, y = X)) + geom_point() + facet_wrap(~year) + scale_x_log10() + labs (x = "Military expenditure (% of GDP)", y = "DCI", title = "DCI and Military expenditure are correlated")
+
+#just one year
+joined_all %>% filter(year == 2000) %>%   arrange(desc(MS.MIL.XPND.GD.ZS)) %>% ggplot(aes(x=MS.MIL.XPND.GD.ZS, y = X)) + geom_point() + facet_wrap(~year) + scale_x_log10() + labs (x = "Military expenditure (% of GDP)", y = "DCI", title = "DCI and Military expenditure are correlated") + geom_text(aes(label = country), vjust = 1, hjust = 1, check_overlap = TRUE)
+
+
+
+
+joined_all %>% filter(year >2000) %>%   arrange(desc(VC.PKP.TOTL.UN)) %>% ggplot(aes(x=VC.PKP.TOTL.UN, y = X)) + geom_point() + facet_wrap(~year) + scale_x_log10() + labs (x = "Presence of peace keepers (number of troops, police...", y = "DCI", title = "DCI and Military expenditure are correlated")
+
+
+
+
+```
+
+
+#look at model
+
+```{r}
+  lm(X  ~ log10(MS.MIL.XPND.GD.ZS),
+     data = joined_all) %>%
+  summary()
+
+fit <-  lm(X  ~ log10(MS.MIL.XPND.GD.ZS),
+     data = joined_all) 
+```
+
+
+
+next steps
+1. check by decade or see what happens during war times
+2. look at other indicatoes
+
+
+```{r}
+
+joined_all %>% arrange(desc(NY.GDP.PCAP.CD)) %>% ggplot(aes(x=NY.GDP.PCAP.CD, y = X)) + geom_point() + facet_wrap(~year) + scale_x_log10()
+```
+

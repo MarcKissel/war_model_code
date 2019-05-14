@@ -1,0 +1,260 @@
+---
+title: "War_climate_data"
+author: "Marc Kissel"
+date: "October 28, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+```
+
+
+
+
+###About the data
+
+for the data from the word bank (http://sdwebx.worldbank.org/climateportal/index.cfm?page=downscaled_data_download&menu=historical) can only get 30 countries at a time. 
+
+"This gridded historical dataset is derived from observational data, and provides quality controlled temperature and rainfall values from thousands of weather stations worldwide, as well as derivative products including monthly climatologies and long term historical climatologies. The dataset is produced by the Climatic Research Unit (CRU) of University of East Anglia (UEA), and reformatted by International Water Management Institute (IWMI). CRU-(Gridded Product). CRU data can be mapped to show the baseline climate and seasonality by month, for specific years, and for rainfall and temperature."
+
+
+
+TAS= near surface monthly mean air temperature (tas), 
+
+first, read data into R and calculate values
+
+```{r}
+my_data <- read_csv("fix_world_bank.csv")
+
+
+```
+
+
+ok, now we want something different. 
+1. get the highest 3 values for a month
+2. get the lowest 3 values for a month
+
+then max year 1 - max year 2 and min year 1 - min year 2
+
+
+
+```{r new values}
+#look at data organized  by TAS
+
+temp <- my_data %>% group_by(Country, Year) %>% arrange(TAS, .by_group =TRUE) # arrange data by TAS 
+
+#now i want to get the lowest and highest 3 TAS by country
+
+
+#max_min_TAS_by_county <- temp %>% filter(row_number()>9 | row_number()<4) # this is all. but i want mean of the high and lows so might need to do as seperate?
+
+max_vals <- temp %>% filter(row_number()>9) # highest
+min_vals <- temp %>% filter(row_number()<4) # lowest
+
+min_vals_mean <- min_vals %>% summarise(Mean_min = mean(TAS))
+max_vals_mean <- max_vals %>% summarise(Mean_max = mean(TAS))
+
+
+#now i need to subtract 1 from 2, 2 from  3, 3 from 4, etc
+
+
+
+avg_min_change <-  min_vals_mean  %>%  mutate(min_change_from_last_year = Mean_min - lag(Mean_min, default=Mean_min[1]))  
+
+
+avg_max_change <-  max_vals_mean  %>%  mutate(max_change_from_last_year = Mean_max - lag(Mean_max, default=Mean_max[1])) 
+
+
+all_values <- left_join(avg_min_change, avg_max_change)
+
+```
+
+what if i made clorpath maps as animated time sereis like in tidytuesday cast abuot prison incarceration rate
+Also note the iso dataset that i think was talked about in another tidytuesd cast (maybe the shuttle on?)
+
+
+ok so lets think about making a map
+
+```{r}
+map_data("world")
+#example from help
+map('world', fill = TRUE, col = 1:10)
+all_values
+#ok, so this is in region. my all_values is in country ISO i think
+
+
+library(countrycode)
+?countrycode
+?codelist
+
+my_map <- all_values %>% mutate(region = countrycode(Country, "iso3c", "country.name")) #note: used 'region' to match to map data
+
+#note error and come back to it?
+
+
+```
+
+
+
+```{r}
+#right_join(map_data("state"), by = "region")
+library(ggthemes)
+my_map <- my_map %>% right_join(map_data("world"), by = "region")
+
+#lets just look at one year
+my_map %>% filter(Year == 1981) %>% ggplot(aes(x= long, y = lat,group = group, fill= min_change_from_last_year
+)) + geom_polygon() + theme_map()
+
+```
+
+#ok, but not sure since i have multpel row for each coutnry for each year?
+
+over the years animate
+```{r}
+library(gganimate)
+#transition_manual(year)
+
+#below works but takes a long time to load!
+
+my_map %>% ggplot(aes(x= long, y = lat,group = group, fill= min_change_from_last_year)) + geom_polygon() + theme_map() + transition_manual(Year)
+
+```
+
+nice!!!!!!
+
+#ok, now i kinda wonder about DCI over time
+
+```{r}
+DCI <- read_csv("X_Factor_Dataset.csv")
+
+DCI_interact <-  DCI %>% gather(value = X, key = country, Belgium:Iraq) %>% rename(region = country)
+
+#join to map_data
+
+DCI_map <- DCI_interact %>% right_join(map_data("world"), by = "region")
+
+#something might be up with the data so invetdiage DCI_map more  but for now lest see.
+#MMIGHT WANT LEFT_join?
+
+#map for one year
+
+DCI_map %>% filter(Year == 1981) %>% ggplot(aes(x= long, y = lat,group = group, fill= X
+)) + geom_polygon() + theme_map()
+
+
+#animation
+DCI_map %>% ggplot(aes(x= long, y = lat,group = group, fill= X
+)) + geom_polygon() + theme_map() + transition_manual(Year)
+
+```
+
+#current notes
+for dci it is missing some countires...is it cause of NAs? also trye for the min temp map we are missing the Us? 
+
+Looks like in map_data it is called USA...but in DCI = United_States
+
+also lost russia
+in map.data = Russia
+in dci = Russia_USSR
+
+so can i fix  this
+
+```{r}
+DCI_interact <-  DCI %>% gather(value = X, key = country, Belgium:Iraq) %>% rename(region = country)
+
+#first i need to rename United_States as USA 
+
+
+#mutate(state_code_cleaned = fct_collapse(
+#    state_code,
+#    "RU" = c("SU", "RU"),
+#    "FR" = "F",
+#    "JP" = "J",
+#    "IT" = "I"
+
+
+ DCI_interact <- DCI_interact %>% mutate(region = fct_collapse(region, "USA" = "United_States", "Russia" = "Russia_USSR"))
+    
+#join to map_data 
+
+
+DCI_map <- DCI_interact %>% right_join(map_data("world"), by = "region") #this has all the data from worlmap
+
+
+DCI_map %>% filter(Year == 1981) %>% ggplot(aes(x= long, y = lat,group = group, fill= X
+)) + geom_polygon() + theme_map() + coord_cartesian() + scale_fill_gradient2(low = 'blue', high = 'red', midpoint =  .8) + labs(title = "DCI from 1980", subtitle = 'Year= {closest_state} ')
+
+#animate 2000+
+DCI_map %>% filter(Year > 2000) %>% ggplot(aes(x= long, y = lat,group = group, fill= X
+)) + geom_polygon() + theme_map() + coord_cartesian() + transition_manual(Year) + scale_fill_gradient2(low = 'blue', high = 'red', midpoint =  .8) 
+
+#removed corrd-cart and trying to make it nicer
+
+DCI_map %>% filter(Year > 2000) %>% ggplot(aes(x= long, y = lat,group = group, fill= X
+)) + geom_polygon() + theme_map() + coord_map(xlim=c(-180,180))  + transition_manual(Year) + scale_fill_gradient2(low = 'blue', high = 'red', midpoint =  .8)  
+#note that i added "coord_map(xlim=c(-180,180))" thing vi   stackoverflow to avoid line appearing. 
+
+
+
+#trying to add year to the label
+#to do this it looks like i need to not use transition_manual and rather use transison_time, but this makes it a lot longer to complie
+
+DCI_map %>% filter(Year > 2005) %>% ggplot(aes(x= long, y = lat,group = group, fill= X
+)) + geom_polygon() + theme_map() + coord_map(xlim=c(-180,180))  + scale_fill_gradient2(low = 'blue', high = 'red', midpoint =  .8) + transition_time(Year) + labs(title = 'Year: {frame_time}')
+
+#after 1900
+
+DCI_map %>% filter(Year > 1900) %>% ggplot(aes(x= long, y = lat,group = group, fill= X
+)) + geom_polygon() + theme_map() + coord_map(xlim=c(-180,180))  + scale_fill_gradient2(low = 'blue', high = 'red', midpoint =  .8) + transition_time(Year) + labs(title = 'Year: {frame_time}')
+
+
+
+
+###belwo is old i think
+DCI_map %>% filter(Year > 2000) %>% ggplot(aes(x= long, y = lat,group = group, fill= X
+)) + geom_polygon() + theme_map() + coord_cartesian()  + scale_fill_gradient2(low = 'blue', high = 'red', midpoint =  .8) + transition_time(Year) + labs(title = 'Year: {frame_time}')
+```
+
+the whole thing:
+after 1900
+
+this works, but  map is wonky....i could go back to the left_join if i dont fiure out what is happening above and then try the coord-map xlim trick
+o
+
+```{r}
+DCI_map %>% filter(Year > 1900) %>% ggplot(aes(x= long, y = lat,group = group, fill= X
+)) + geom_polygon() + theme_map() + coord_cartesian()  + scale_fill_gradient2(low = 'blue', high = 'red', midpoint =  .8) + transition_time(Year) + labs(title = 'Year: {frame_time}')
+
+```
+
+
+
+what if i join the other way? will i et the whole map
+
+```{r}
+DCI_map <- DCI_interact %>% full_join(map_data("world"), by = "region")
+
+
+DCI_map %>% filter(Year == 1981) %>% ggplot(aes(x= long, y = lat,group = group, fill= X
+)) + geom_polygon() + theme_map() + coord_cartesian() + scale_fill_gradient2(low = 'blue', high = 'red', midpoint =  .8) + labs(title = "DCI from 1980", subtitle = 'Year= {closest_state} ')
+
+#below is the first map but now i am doing a left join
+DCI_map %>% filter(Year > 2001) %>% ggplot(aes(x= long, y = lat,group = group, fill= X
+)) + geom_polygon() + theme_map() + coord_cartesian()  + scale_fill_gradient2(low = 'blue', high = 'red', midpoint =  .8) + transition_time(Year) + labs(title = 'Year: {frame_time}')
+
+
+
+
+```
+
+
+#ok, why is map not working
+```{r}
+
+```
+
