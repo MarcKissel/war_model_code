@@ -132,7 +132,7 @@ all_things <- left_join(avg_min_change, avg_max_change)
 
  
 
-
+#update 2019-05-14: i need to look this over more and see what is going on. why did i subset out this data? also note that my_data is sued here too! 
 ```{r}
 
 subset_1951_1980 <- my_data %>% filter(Year >1950 & Year < 1981)
@@ -201,6 +201,47 @@ my_join2 <- left_join(values_RMS_edited, temp_codelist, by ="iso3c")
 ```
 
 
-OK, this works! but next step is to think about what i need in the dataframe. i can't remember where we are going with this. might need the max and min values 
+OK, this works! but next step is to think about what i need in the dataframe. i can't remember where we are going with this. might need the max and min values. i can put them back, i think, but then will be repertive...maybe select out from all_things and then join back to my_join?
 
+I probbaly should redo all of this above in a cleaner manner to make sure it is good
+```{r}
+my_join3 <- all_things %>% ungroup() %>%  mutate(iso3c = Country) %>% select(-Country) %>% inner_join(my_join, by=c("iso3c", "Year"))
+```
+
+test it
+
+```{r}
+my_join3 %>% filter(Country == "MRT" & Year == 1910) 
+my_join %>% filter(Country == "MRT" & Year == 1910) 
+```
+```{r}
+
+
+```
+
+looks to me like this has all the things!
+
+
+
+#now, we need the DCI values back!
+
+```{r}
+DCI <- read_csv("DCI_data_full.csv")
+DCI_edited_all <- DCI %>% mutate(iso3c = stateabb, Year=year) %>% select(-year) 
+#now i want to join where we have full data? i could inner join or left/right joing and have NAs? prob best for eeping nas
+
+my_data <- left_join(my_join3, DCI_edited_all, by=c("iso3c", "Year"))
+#my_data <- inner_join(my_join3, DCI_edited_all, by=c("iso3c", "Year"))
+my_data %>% filter(iso3c == "ABW")
+```
+
+#ok, data analysis time
+
+what is the relastionship between DCI and other values like RMS
+```{r}
+my_data %>% filter(!is.na(X)) %>% ggplot(aes(x=RMS, y = X)) + geom_point()
+my_data %>% filter(!is.na(X)) %>% ggplot(aes(x=RMS, y = X, color =continent)) + geom_point() + labs(y = "DCI", x = "RMS of temp but unclear what it is", color = "Continent")
+fit_rms <- lm(X ~ RMS, data = my_data)
+#not much of a relastionship
+```
 
