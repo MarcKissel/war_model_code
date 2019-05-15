@@ -132,7 +132,8 @@ all_things <- left_join(avg_min_change, avg_max_change)
 
  
 
-#update 2019-05-14: i need to look this over more and see what is going on. why did i subset out this data? also note that my_data is sued here too! 
+#update 2019-05-14: i need to look this over more and see what is going on. why did i subset out this data? also note that my_data is used here too! 
+
 ```{r}
 
 subset_1951_1980 <- my_data %>% filter(Year >1950 & Year < 1981)
@@ -144,6 +145,7 @@ subset_1951_1980 <- subset_1951_1980 %>% group_by(Month, Country)
 new_list <- subset_1951_1980 %>% group_by(Month, Country) %>% summarise(mean_for_month = mean(TAS)) #new dataframe with means for each month between 1951-1980
 
 new_data <- left_join(my_data, new_list) #put data together
+
 values <- new_data %>% mutate(difference = TAS - mean_for_month)
 values_RMS <- values %>% group_by(Country, Year) %>% summarise(RMS = (sqrt(mean(difference^2)))  ) # here is just the vector of RMS
 values_RMS2 <- values %>% group_by(Country, Year) %>% mutate(RMS = (sqrt(mean(difference^2)))  ) #here is with new col RMS in the dataset
