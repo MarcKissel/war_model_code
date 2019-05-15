@@ -23,7 +23,7 @@ library(WDI)
 
 
 ```{r}
-WDIsearch("*conflict") %>%
+WDIsearch("*armed") %>%
   as.data.frame() %>%
   tbl_df() %>%
   arrange(str_length(name)) %>%
@@ -34,6 +34,7 @@ look at WDI
 indicator NY.GDP.PCAP.CD = GDP per capita (current US$)
 looks like only data rom 1960 onward for the GDP stuff
 might be loosing coutnired in the join due to names...triple check afterwards
+
 
 ```{r}
 wdi_indicator <-WDI(indicator = "NY.GDP.PCAP.CD", extra = TRUE, start= 2010, end = 2010)
@@ -53,8 +54,13 @@ joined %>%  arrange(desc(NY.GDP.PCAP.CD)) %>% ggplot(aes(x=NY.GDP.PCAP.CD, y = X
 
 all data
 
+MS.MIL.XPND.GD.ZS = Military expenditure (% of GDP) 
+MS.MIL.TOTL.P1	Armed forces personnel, total
+MS.MIL.TOTL.TF.ZS	Armed forces personnel (% of total labor force
+
+
 ```{r}
-wdi_indicator_all <-WDI(indicator = c( "NY.GDP.PCAP.CD", "MS.MIL.XPND.GD.ZS", "VC.PKP.TOTL.UN"), extra = TRUE, start= 1960, end = 2010)
+wdi_indicator_all <-WDI(indicator = c( "NY.GDP.PCAP.CD", "MS.MIL.XPND.GD.ZS","MS.MIL.TOTL.TF.ZS" , "VC.PKP.TOTL.UN"), extra = TRUE, start= 1960, end = 2010)
 
 #i want to rename so i can join. rename DCI
 
@@ -90,6 +96,23 @@ joined_all %>% filter(year >1989 & year <2000) %>%   arrange(desc(MS.MIL.XPND.GD
 
 #just one year
 joined_all %>% filter(year == 2000) %>%   arrange(desc(MS.MIL.XPND.GD.ZS)) %>% ggplot(aes(x=MS.MIL.XPND.GD.ZS, y = X, color = region)) + geom_point() + facet_wrap(~year) + scale_x_log10() + labs (x = "Military expenditure (% of GDP)", y = "DCI", title = "DCI and Military expenditure are correlated", subtitle = "year = 2000") + geom_text(aes(label = country), vjust = 1, hjust = 1, check_overlap = TRUE, angle = 45)
+
+#####################################################
+#####for MS.MIL.TOTL.TF.ZS
+#####################################################
+joined_all  %>%   arrange(desc(MS.MIL.TOTL.TF.ZS)) %>% ggplot(aes(x=MS.MIL.TOTL.TF.ZS, y = X, color = region)) + geom_point() +  scale_x_log10() + labs (x = "Armed forces personnel (% of total labor force)
+", y = "DCI", title = "DCI and Military expenditure are correlated", subtitle = "from years 1960-2010")
+
+
+
+
+#for the 2000s
+joined_all %>% filter(year >2000) %>%   arrange(desc(MS.MIL.TOTL.TF.ZS)) %>% ggplot(aes(x=MS.MIL.TOTL.TF.ZS, y = X, color = region)) + geom_point() + facet_wrap(~year) + scale_x_log10() + labs (x = "Armed forces personnel (% of total labor force)
+", y = "DCI", title = "DCI and Military expenditure are correlated") #facet_wrap
+
+joined_all %>% filter(year >2000) %>%   arrange(desc(MS.MIL.TOTL.TF.ZS)) %>% ggplot(aes(x=MS.MIL.TOTL.TF.ZS, y = X, color = region)) + geom_point() +  scale_x_log10() + labs (x = "Armed forces personnel (% of total labor force)", y = "DCI", title = "DCI and Military expenditure are correlated", subtitle = "from years 2001-2010") # all data post 2000 in one
+
+
 
 
 
