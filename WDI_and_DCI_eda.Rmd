@@ -64,7 +64,7 @@ wdi_indicator_all <-WDI(indicator = c( "NY.GDP.PCAP.CD", "MS.MIL.XPND.GD.ZS","MS
 
 #i want to rename so i can join. rename DCI
 
-DCI_edited_all <- DCI %>% mutate(iso3c = stateabb) %>% filter(year > "1959")
+DCI_edited_all <- DCI %>% mutate(iso3c = stateabb) %>% filter(year > "1959") #year > 1959 since that is what i can get in WDI
 
 joined_all <- DCI_edited_all %>% inner_join(wdi_indicator_all, by = c("iso3c", "year") )
 
@@ -76,13 +76,24 @@ joined_all %>% filter(year >2000) %>%   arrange(desc(NY.GDP.PCAP.CD)) %>% ggplot
 
 joined_all  %>%   arrange(desc(MS.MIL.XPND.GD.ZS)) %>% ggplot(aes(x=MS.MIL.XPND.GD.ZS, y = X, color = region)) + geom_point() +  scale_x_log10() + labs (x = "Military expenditure (% of GDP)", y = "DCI", title = "DCI and Military expenditure are correlated", subtitle = "from years 1960-2010")
 
-joined_all  %>%   arrange(desc(MS.MIL.XPND.GD.ZS)) %>% ggplot(aes(x=MS.MIL.XPND.GD.ZS, y = X, color = region)) + geom_point() +  scale_x_log10() + labs (x = "Military expenditure (% of GDP)", y = "DCI", title = "DCI and Military expenditure are correlated", subtitle = "from years 1960-2010")
-
+p <-joined_all  %>%   arrange(desc(MS.MIL.XPND.GD.ZS)) %>% ggplot(aes(x=MS.MIL.XPND.GD.ZS, y = X, color = region, text=Country)) + geom_point() +  scale_x_log10() + labs (x = "Military expenditure (% of GDP)", y = "DCI", title = "DCI and Military expenditure are correlated", subtitle = "from years 1960-2010")
+library(plotly)
+ggplotly(p, tooltip = "text")
 
 #for the 2000s
 joined_all %>% filter(year >2000) %>%   arrange(desc(MS.MIL.XPND.GD.ZS)) %>% ggplot(aes(x=MS.MIL.XPND.GD.ZS, y = X, color = region)) + geom_point() + facet_wrap(~year) + scale_x_log10() + labs (x = "Military expenditure (% of GDP)", y = "DCI", title = "DCI and Military expenditure are correlated") #facet_wrap
 
 joined_all %>% filter(year >2000) %>%   arrange(desc(MS.MIL.XPND.GD.ZS)) %>% ggplot(aes(x=MS.MIL.XPND.GD.ZS, y = X, color = region)) + geom_point() +  scale_x_log10() + labs (x = "Military expenditure (% of GDP)", y = "DCI", title = "DCI and Military expenditure are correlated", subtitle = "from years 2001-2010") # all data post 2000 in one
+
+#####
+#what if i facet by region for the 2000s/all
+####
+
+joined_all %>% filter(year >2000) %>%   arrange(desc(MS.MIL.XPND.GD.ZS)) %>% ggplot(aes(x=MS.MIL.XPND.GD.ZS, y = X, color = region)) + geom_point() + facet_wrap(~region) + scale_x_log10() + labs (x = "Military expenditure (% of GDP)", y = "DCI", title = "DCI and Military expenditure are correlated")
+
+joined_all  %>%   arrange(desc(MS.MIL.XPND.GD.ZS)) %>% ggplot(aes(x=MS.MIL.XPND.GD.ZS, y = X, color = region)) + geom_point() + facet_wrap(~region) + scale_x_log10() + labs (x = "Military expenditure (% of GDP)", y = "DCI", title = "DCI and Military expenditure are correlated")
+
+
 
 
 
@@ -152,6 +163,8 @@ Residual standard error: 0.04556 on 3296 degrees of freedom
   (816 observations deleted due to missingness)
 Multiple R-squared:  0.3997,	Adjusted R-squared:  0.3995 
 F-statistic:  2194 on 1 and 3296 DF,  p-value: < 2.2e-16
+
+
 
 
 
