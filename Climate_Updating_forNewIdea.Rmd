@@ -146,6 +146,10 @@ new_list <- subset_1951_1980 %>% group_by(Month, Country) %>% summarise(mean_for
 
 new_data <- left_join(my_data, new_list) #put data together
 
+#update June 6, 2019... so this has the mean value for the month from 51-80. then i make a 'difference' col which calculates the dif between the month and the mean for each month in the dataset for each country.
+#then we get the root mean square of the temp difs for each year for each country 
+#values %>% count(Year, Month, Country)
+
 values <- new_data %>% mutate(difference = TAS - mean_for_month)
 values_RMS <- values %>% group_by(Country, Year) %>% summarise(RMS = (sqrt(mean(difference^2)))  ) # here is just the vector of RMS
 values_RMS2 <- values %>% group_by(Country, Year) %>% mutate(RMS = (sqrt(mean(difference^2)))  ) #here is with new col RMS in the dataset
@@ -222,7 +226,8 @@ my_join %>% filter(Country == "MRT" & Year == 1910)
 ```
 
 looks to me like this has all the things!
-
+so my_join2 = has RMS vals
+my_join3 = has min max diffs
 
 
 #now, we need the DCI values back!
@@ -232,18 +237,51 @@ DCI <- read_csv("DCI_data_full.csv")
 DCI_edited_all <- DCI %>% mutate(iso3c = stateabb, Year=year) %>% select(-year) 
 #now i want to join where we have full data? i could inner join or left/right joing and have NAs? prob best for eeping nas
 
-my_data <- left_join(my_join3, DCI_edited_all, by=c("iso3c", "Year"))
+my_data_2 <- left_join(my_join2, DCI_edited_all, by=c("iso3c", "Year"))
+my_data_3 <- left_join(my_join3, DCI_edited_all, by=c("iso3c", "Year"))
+
+####i think my_data_3 has everything we want? so i may not need my)data_2
+
 #my_data <- inner_join(my_join3, DCI_edited_all, by=c("iso3c", "Year"))
-my_data %>% filter(iso3c == "ABW")
+my_data_2 %>% filter(iso3c == "ABW")
+my_data_3 %>% filter(iso3c == "ABW")
 ```
 
 #ok, data analysis time
 
 what is the relastionship between DCI and other values like RMS
 ```{r}
+
+my_data <- my_data_3
 my_data %>% filter(!is.na(X)) %>% ggplot(aes(x=RMS, y = X)) + geom_point()
-my_data %>% filter(!is.na(X)) %>% ggplot(aes(x=RMS, y = X, color =continent)) + geom_point() + labs(y = "DCI", x = "RMS of temp but unclear what it is", color = "Continent")
+my_data %>% filter(!is.na(X)) %>% ggplot(aes(x=RMS, y = X, color =continent)) + geom_point() + labs(y = "DCI", x = "RMS of temp change for a year", color = "Continent")
 fit_rms <- lm(X ~ RMS, data = my_data)
+
+my_data %>% filter(!is.na(X)) %>% ggplot(aes(x=log(RMS), y = log(X), color =continent)) + geom_point() + labs(y = "DCI", x = "RMS of temp change for a year", color = "Continent")
+
+my_data %>% filter(!is.na(X)) %>% ggplot(aes(x=RMS, y = X, color =region)) + geom_point() + labs(y = "DCI", x = "RMS of temp change for a year", color = "region") + scale_x_log10() + scale_y_log10()
+
+###
+ my_data %>% filter(!is.na(X)) %>% ggplot(aes(x=RMS, y = X, color =continent)) + geom_point() + labs(y = "DCI", x = "RMS of temp change for a year", color = "continent") + scale_x_log10() + scale_y_log10()
+ 
+###
+ 
+ 
+ 
 #not much of a relastionship
+```
+
+What if i did same thing but used income? 
+
+
+```{r}
+library(WDI)
+indicators_raw <- WDI(indicator = "NY.GDP.PCAP.CD",
+                      start = 2016, end = 2016, extra = TRUE) %>% rename(gdp_per_capita = NY.GDP.PCAP.CD, year_gdp = year, region_WDI = region)
+
+new <- my_data %>% left_join(indicators_raw, by= c("Country.x" = "iso3c"))
+
+new %>% filter(!is.na(X)) %>% ggplot(aes(x=RMS, y = X, color =continent)) + geom_point(alpha=.3) + labs(y = "DCI", x = "RMS of temp change for a year", color = "continent") + scale_x_log10() + scale_y_log10() + facet_wrap(~continent, scales = "free_x")
+
 ```
 

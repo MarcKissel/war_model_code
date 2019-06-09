@@ -202,3 +202,27 @@ next steps
 joined_all %>% arrange(desc(NY.GDP.PCAP.CD)) %>% ggplot(aes(x=NY.GDP.PCAP.CD, y = X)) + geom_point() + facet_wrap(~year) + scale_x_log10()
 ```
 
+##########################
+############################
+
+What if i did a map that showed the DCI for every country for a year and over a number of years
+
+```{r}
+library(ggthemes)
+glimpse(map_data("world"))
+joined_all$Country
+#are they going to match
+map_set <- map_data("world") %>% 
+  filter(region != "Antarctica")
+DCI_map <- joined_all %>% left_join(map_set, by =(c("Country" = "region")))
+#losing the US...
+
+map_set2 <- map_set %>% mutate(region = replace(region, region == "USA", "United States of America"))
+
+DCI_map <- joined_all %>% inner_join(map_set2, by =(c("Country" = "region")))
+
+DCI_map %>% filter(year == 1980) %>% 
+  ggplot(aes(x=long, y =lat, group=group, fill = X)) + geom_polygon() +theme_map() + scale_fill_gradient2(low = "blue", mid = "pink", high="red", midpoint = .8)
+
+```
+
