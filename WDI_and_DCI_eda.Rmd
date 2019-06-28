@@ -76,6 +76,8 @@ DCI_edited_all <- DCI %>% mutate(iso3c = stateabb) %>% filter(year > "1959") #ye
 joined_all <- DCI_edited_all %>% inner_join(wdi_indicator_all, by = c("iso3c", "year") )
 
 #i need to check if this work via year?
+#UPDATE: what is missing?
+
 
 joined_all %>% filter(year >2000) %>%   arrange(desc(GDP_per_capita)) %>% ggplot(aes(x=GDP_per_capita, y = X)) + geom_point() + facet_wrap(~year) + scale_x_log10() #+ geom_text(aes(label = country), vjust = 1, hjust = 1, check_overlap = TRUE)
 
@@ -142,6 +144,23 @@ joined_all %>% filter(year >2000) %>%   arrange(desc(Armed_forces_personnel)) %>
 
 joined_all %>% filter(year >2000) %>%   arrange(desc(Peacekeepers)) %>% ggplot(aes(x=Peacekeepers, y = X)) + geom_point() + facet_wrap(~year) + scale_x_log10() + labs (x = "Presence of peace keepers (number of troops, police...", y = "DCI", title = "DCI and Military expenditure are correlated")
 
+##############################################
+#rayshader
+###############
+
+
+x_graph <- joined_all  %>%   arrange(desc( Military_expenditure_GDP)) %>% ggplot(aes(x= Military_expenditure_GDP, y = X, color = region)) + geom_point() +  scale_x_log10() + labs (x = "Military expenditure (% of GDP)", y = "DCI", title = "DCI and Military expenditure are correlated", subtitle = "from years 1960-2010")
+
+plot_gg(x_graph, height=3, width=3.5, multicore=TRUE, pointcontract = 0.7, soliddepth=-200)
+
+x_graph2 <- joined_all  %>%   arrange(desc( Military_expenditure_GDP)) %>% ggplot(aes(x= Military_expenditure_GDP, y = X)) + geom_hex() +  scale_x_log10() + labs (x = "Military expenditure (% of GDP)", y = "DCI", title = "DCI and Military expenditure are correlated", subtitle = "from years 1960-2010")
+
+
+plot_gg(x_graph2, height=3, width=3.5, multicore=TRUE, pointcontract = 0.7, soliddepth=-200)
+
+
+
+p <-joined_all  %>%   arrange(desc( Military_expenditure_GDP)) %>% ggplot(aes(x= Military_expenditure_GDP, y = X)) + geom_hex() +  scale_x_log10() + labs (x = "Military expenditure (% of GDP)", y = "DCI", title = "DCI and Military expenditure are correlated", subtitle = "from years 1960-2010")
 
 ```
 
@@ -207,6 +226,8 @@ joined_all %>% arrange(desc(NY.GDP.PCAP.CD)) %>% ggplot(aes(x=NY.GDP.PCAP.CD, y 
 
 What if i did a map that showed the DCI for every country for a year and over a number of years
 
+
+UPDATE I THINK MISSING MAP DO TO HOW I FILTER?
 ```{r}
 library(ggthemes)
 glimpse(map_data("world"))
@@ -221,8 +242,35 @@ map_set2 <- map_set %>% mutate(region = replace(region, region == "USA", "United
 
 DCI_map <- joined_all %>% inner_join(map_set2, by =(c("Country" = "region")))
 
-DCI_map %>% filter(year == 1980) %>% 
+DCI_map %>% filter(year == 2000) %>% 
   ggplot(aes(x=long, y =lat, group=group, fill = X)) + geom_polygon() +theme_map() + scale_fill_gradient2(low = "blue", mid = "pink", high="red", midpoint = .8)
 
+DCI_map2 <- joined_all %>% inner_join(map_set2, by =(c("Country" = "region")))
+
+DCI_map  %>% 
+  ggplot(aes(x=long, y =lat, group=group, fill = X)) + geom_polygon() +theme_map() + scale_fill_gradient2(low = "blue", mid = "pink", high="red", midpoint = .8) 
+####################################
+#######################################
+#6/27 updates:
+#i think i joined wrong back in the joined_all step
+#go back and check
+#########3#
+######
+
+joined_all_2 <- DCI_edited_all %>% left_join(wdi_indicator_all, by = c("iso3c", "year") )
+
+DCI_map2 <- joined_all_2 %>% right_join(map_set2, by =(c("Country" = "region")))
+
+DCI_map2 %>% filter(year == 2000) %>% 
+  ggplot(aes(x=long, y =lat, group=group, fill = X)) + geom_polygon() +theme_map() + scale_fill_gradient2(low = "blue", mid = "pink", high="red", midpoint = .8)
+#####MUCH BETTER
+#but it is huge.....
+
+DCI_map2 %>% filter(year == 2000) %>% distinct(Country, year, group, lat, long,  .keep_all = TRUE) %>% ggplot(aes(x=long, y =lat, group=group, fill = X)) + geom_polygon() +theme_map() + scale_fill_gradient2(low = "blue", mid = "pink", high="red", midpoint = .8)
+
+
+library(gganimate)
+DCI_map2 %>% filter(year > 2005) %>% distinct(Country, year, group, lat, long,  .keep_all = TRUE) %>% 
+  ggplot(aes(x=long, y =lat, group=group, fill = X)) + geom_polygon() +theme_map() + scale_fill_gradient2(low = "blue", mid = "pink", high="red", midpoint = .8) + transition_time(year) + labs(title = 'Year: {frame_time}')
 ```
 
